@@ -5,6 +5,7 @@ import tornado.httpserver as http
 import tornado.ioloop as ioloop
 import tornado.web as web
 import ships.websockets as sockets
+import logging as lg
 
 
 class MainHandler(web.RequestHandler):
@@ -16,6 +17,7 @@ class MainHandler(web.RequestHandler):
 
 def main():
     """ Initialize tornado IOLoop and webserver """
+    lg.getLogger().setLevel(lg.DEBUG)
     handlers = [
         (r'/', MainHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),

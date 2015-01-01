@@ -10,9 +10,49 @@
 
   <link rel="stylesheet" href="/static/styles.css">
 
+<script language="javascript" type="text/javascript">
+function exec_command()
+{
+	return false;
+}
+
+function send_msg(msg)
+{
+	websocket.send(JSON.stringify(msg));
+}
+
+function connect_websocket()
+{
+	websocket = new WebSocket("wss:///main");
+	websocket.onopen = function(evt)
+	{
+		send_msg({"type": "ping"})
+	};
+	websocket.onclose = function(evt)
+	{
+	};
+	websocket.onmessage = function(evt)
+	{
+		var msg = JSON.parse(evt.data);
+		if(msg.type == 'alert')
+		{
+			alert(msg.text);
+		}
+	};
+	websocket.onerror = function(evt)
+	{
+	};
+}
+function init()
+{
+	connect_websocket();
+}
+</script>
 </head>
 
-<body>
-Hello World
+<body onload="init();">
+<form action="" name="form_command" onsubmit="return exec_command();">
+  Command:<input type="text" name="input_command">
+</form>
 </body>
 </html>
