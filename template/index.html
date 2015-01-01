@@ -23,7 +23,7 @@ function send_msg(msg)
 
 function connect_websocket()
 {
-	websocket = new WebSocket("ws:///main");
+	websocket = new WebSocket("{{ escape(ws_url) }}");
 	websocket.onopen = function(evt)
 	{
 		send_msg({"type": "ping"})

@@ -4,20 +4,34 @@ import os
 import tornado.httpserver as http
 import tornado.ioloop as ioloop
 import tornado.web as web
+import tornado.template as template
 import ships.websockets as sockets
 import logging as lg
+import os
 
+tmpl = template.Loader(r'template')
 
 class MainHandler(web.RequestHandler):
-    # pylint: disable=too-few-public-methods, abstract-method
+    # pylint: disable=too-few-public-methods, abstract-method, star-args
     """ Main handler for entry page """
     def get(self):
         """ Redirect to index """
-        self.redirect(r'static/index.html')
+        host = self.request.host
+        if os.environ['DEBUG']:
+            data = {
+                'ws_url': "ws://%s/main" % host,
+            }
+        else:
+            data = {
+                'ws_url': "ws://%s/main" % host,
+            }
+        resp = tmpl.load("index.html").generate(**data)
+        self.write(resp)
 
 def main():
     """ Initialize tornado IOLoop and webserver """
-    lg.getLogger().setLevel(lg.DEBUG)
+    if os.environ['DEBUG']:
+        lg.getLogger().setLevel(lg.DEBUG)
     handlers = [
         (r'/', MainHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),
