@@ -16,10 +16,6 @@ game = "{{ escape(game) }}";
 player = "{{ escape(player) }}";
 secret = "{{ escape(secret) }}";
 
-function exec_command()
-{
-	return false;
-}
 
 function send_msg(msg)
 {
@@ -32,6 +28,12 @@ function ping()
 		"type": "ping"
 	});
 	window.setTimeout(ping, 25000);
+}
+
+function display(num, html)
+{
+	field = document.getElementById("display" + num);
+	field.innerHTML = html;
 }
 
 function connect_websocket()
@@ -56,16 +58,23 @@ function connect_websocket()
 	websocket.onmessage = function(evt)
 	{
 		var msg = JSON.parse(evt.data);
-		if(msg.type == 'alert')
+		switch (msg.type)
 		{
-			alert(msg.text);
-		}
-		if(msg.type == 'pong')
-		{
-			field = document.getElementById("ping_count");
-			count = parseInt(field.innerHTML);
-			count += 1;
-			field.innerHTML = count;
+			case 'alert':
+				alert(msg.text);
+				break;
+			case 'pong':
+				field = document.getElementById("ping_count");
+				count = parseInt(field.innerHTML);
+				count += 1;
+				field.innerHTML = count;
+				break;
+			case 'display0':
+				display(0, msg.html);
+				break;
+			case 'display1':
+				display(1, msg.html);
+				break;
 		}
 	};
 	websocket.onerror = function(evt)
@@ -77,13 +86,28 @@ function init()
 {
 	connect_websocket();
 }
+
+function exec_command()
+{
+	field = document.getElementById("input_command");
+	send_msg({
+		"type": "command",
+		"command": field.value
+	});
+	field.value = "";
+	return false;
+}
 </script>
 </head>
 
 <body onload="init();">
 <div class="fr" id="ping_count">0</div>
 <form action="" name="form_command" onsubmit="return exec_command();">
-  Command:<input type="text" name="input_command">
+  Command:<input type="text" name="input_command" id="input_command">
 </form>
 </body>
+<div id="display0">
+</div>
+<div id="display1">
+</div>
 </html>

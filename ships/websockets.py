@@ -20,6 +20,13 @@ class JsonSocket(websocket.WebSocketHandler):
             'text': text,
         })
 
+    def send_html(self, display, html):
+        """ Send html to the client """
+        self.send_msg({
+            'type': 'display%d' % display,
+            'html': html,
+        })
+
 class MainSocket(JsonSocket):
     # pylint: disable=abstract-method
     """ Main socket, should be the only one, lets see """
@@ -37,9 +44,9 @@ class MainSocket(JsonSocket):
                 msg['player']
             )
             if verify == msg['secret']:
-                self.send_alert('Welcome')
+                self.send_html(0, 'Welcome')
             else:
-                self.send_alert('Access denied')
+                self.send_html(0, 'Access denied')
 
     def on_close(self):
         pass
