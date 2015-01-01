@@ -23,7 +23,7 @@ class MainHandler(web.RequestHandler):
             }
         else:
             data = {
-                'ws_url': "ws://%s/main" % host,
+                'ws_url': "wss://%s/main" % host,
             }
         resp = tmpl.load("index.html").generate(**data)
         self.write(resp)
