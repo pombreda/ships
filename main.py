@@ -7,25 +7,28 @@ import tornado.web as web
 import tornado.template as template
 import ships.websockets as sockets
 import logging as lg
-import os
+import ships.security as sec
 
 tmpl = template.Loader(r'template')
 
 class MainHandler(web.RequestHandler):
     # pylint: disable=too-few-public-methods, abstract-method, star-args
+    # pylint: disable=arguments-differ
     """ Main handler for entry page """
-    def get(self):
+    def get(self, game):
         """ Redirect to index """
+        player = 0
         host = self.request.host
+        data = {
+            'game': game,
+            'player': str(player),
+            'secret': sec.client_verify(game, player)
+        }
         if 'DEBUG' in os.environ:
-            data = {
-                'ws_url': "ws://%s/main" % host,
-            }
+            data['ws_url'] = "ws://%s/main" % host
         else:
-            data = {
-                'ws_url': "wss://%s/main" % host,
-            }
-        resp = tmpl.load("index.html").generate(**data)
+            data['ws_url'] = "wss://%s/main" % host
+        resp = tmpl.load("game.tmpl").generate(**data)
         self.write(resp)
 
 def main():
@@ -33,7 +36,7 @@ def main():
     if 'DEBUG' in os.environ:
         lg.getLogger().setLevel(lg.DEBUG)
     handlers = [
-        (r'/', MainHandler),
+        (r'/game/(\w+)', MainHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),
         (r'/main', sockets.MainSocket),
     ]

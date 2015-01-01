@@ -11,6 +11,11 @@
   <link rel="stylesheet" href="/static/styles.css">
 
 <script language="javascript" type="text/javascript">
+
+game = "{{ escape(game) }}";
+player = "{{ escape(player) }}";
+secret = "{{ escape(secret) }}";
+
 function exec_command()
 {
 	return false;
@@ -21,15 +26,32 @@ function send_msg(msg)
 	websocket.send(JSON.stringify(msg));
 }
 
+function ping()
+{
+	send_msg({
+		"type": "ping"
+	});
+	window.setTimeout(ping, 25000);
+}
+
 function connect_websocket()
 {
 	websocket = new WebSocket("{{ escape(ws_url) }}");
+	field = document.getElementById("ping_count");
+	field.innerHTML = 0;
 	websocket.onopen = function(evt)
 	{
-		send_msg({"type": "ping"})
+		send_msg({
+			"type": "hello",
+			"game": game,
+			"player": player,
+			"secret": secret
+		});
+		ping();
 	};
 	websocket.onclose = function(evt)
 	{
+		window.setTimeout(connect_websocket, 1000);
 	};
 	websocket.onmessage = function(evt)
 	{
@@ -38,9 +60,17 @@ function connect_websocket()
 		{
 			alert(msg.text);
 		}
+		if(msg.type == 'pong')
+		{
+			field = document.getElementById("ping_count");
+			count = parseInt(field.innerHTML);
+			count += 1;
+			field.innerHTML = count;
+		}
 	};
 	websocket.onerror = function(evt)
 	{
+		window.setTimeout(connect_websocket, 5000);
 	};
 }
 function init()
@@ -51,6 +81,7 @@ function init()
 </head>
 
 <body onload="init();">
+<div class="fr" id="ping_count">0</div>
 <form action="" name="form_command" onsubmit="return exec_command();">
   Command:<input type="text" name="input_command">
 </form>
