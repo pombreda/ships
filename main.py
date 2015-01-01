@@ -4,6 +4,7 @@ import os
 import tornado.httpserver as http
 import tornado.ioloop as ioloop
 import tornado.web as web
+import ships.websockets as sockets
 
 
 class MainHandler(web.RequestHandler):
@@ -18,6 +19,7 @@ def main():
     handlers = [
         (r'/', MainHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),
+        (r'/main', sockets.MainSocket),
     ]
     application = web.Application(handlers)
     http_server = http.HTTPServer(application)
