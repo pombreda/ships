@@ -17,7 +17,7 @@ class MainHandler(web.RequestHandler):
     def get(self):
         """ Redirect to index """
         host = self.request.host
-        if os.environ['DEBUG']:
+        if 'DEBUG' in os.environ:
             data = {
                 'ws_url': "ws://%s/main" % host,
             }
@@ -30,7 +30,7 @@ class MainHandler(web.RequestHandler):
 
 def main():
     """ Initialize tornado IOLoop and webserver """
-    if os.environ['DEBUG']:
+    if 'DEBUG' in os.environ:
         lg.getLogger().setLevel(lg.DEBUG)
     handlers = [
         (r'/', MainHandler),
