@@ -17,6 +17,7 @@ class BaseGame(object):
         self._socket = socket
         self._game_id = socket.game_id
         self._player_id = socket.player_id
+        self._notifies = []
 
     @property
     def socket(self):
@@ -37,7 +38,18 @@ class BaseGame(object):
         return self._player_id
 
     @gen.coroutine
-    def _on_recv(self, call, data):
+    def visualize(self, state):
+        """ Execute visualization """
+        html = yield self.on_visualize(state)
+        self.socket.send_html(1, html)
+
+    def send_notify(self, notify):
+        """ Send deferred notify. Default way to send notifies from on_command
+        and on_notify. """
+        self._notifies.append(notify)
+
+    @gen.coroutine
+    def _on_recv(self, call, data, auto_update=False):
         """ Receives messages, loads state, calls game, saves state """
         connection = yield momoko.Op(db.getconn)
         with db.manage(connection):
@@ -59,17 +71,18 @@ class BaseGame(object):
                 state = msgpack.loads(state, encoding=s.ENCODING)
                 try:
                     val = yield call(data, state)
-                    self.socket.send_html(
-                        0,
-                        "<pre>%s</pre>" % val,
-                    )
+                    if auto_update and s.AUTO_UPDATE:
+                        self.socket.send_html(
+                            0,
+                            "<pre>%s</pre>" % val,
+                        )
                 except Exception as e:
                     self.socket.send_html(
                         0,
                         "<pre>%s</pre>" % e
                     )
                     raise
-                state = msgpack.dumps(state)
+                store_state = msgpack.dumps(state)
                 yield momoko.Op(
                     connection.execute,
                     """
@@ -82,15 +95,19 @@ class BaseGame(object):
                             game_id = %s;
                     """,
                     (
-                        state,
+                        store_state,
                         datetime.now(),
                         self.game_id
                     )
                 )
-                html = yield self.on_visualize(state)
-                self.socket.send_html(1, html)
             finally:
                 yield momoko.Op(connection.execute, "COMMIT")
+            for notify in self._notifies:
+                self.socket.send_notify(notify)
+            self._notifies = []
+            if auto_update and s.AUTO_UPDATE:
+                html = yield self.on_visualize(state)
+                self.socket.send_html(1, html)
 
     @abc.abstractmethod
     @gen.coroutine

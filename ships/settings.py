@@ -5,9 +5,10 @@ def GAME_CLASS():
     from .game import Ships
     return Ships
 
-PLAYER=2
-ENCODING="UTF-8"
-SECRET=(
+PLAYER      = 2
+AUTO_UPDATE = True
+ENCODING    = "UTF-8"
+SECRET      = (
     "bOKBlbsEcGa3nHKOuKoVzRMLEU0tD58h"
     "60J5I7oAxqJZJJWySSt0jBJkHLsnJC4E"
     "MxkD0wIbS7Qs0qiDqq4eZMTCqPvxrAp1"

@@ -86,7 +86,6 @@ class GameHandler(web.RequestHandler):
                         (game,1, state, datetime.now())
                     )
                     return 0
-
                 else:
                     player_count = players[0]
                     if player_count < s.PLAYER:

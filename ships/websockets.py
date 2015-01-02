@@ -4,6 +4,7 @@ import logging as lg
 import tornado.websocket as websocket
 import tornado.gen as gen
 import psycopg2
+import momoko
 import json
 import msgpack
 from . import security as sec
@@ -85,12 +86,35 @@ class MainSocket(GameSocket):
             return
         type_ = msg['type']
         if type_ == 'game_ready':
-            self.send_html(0, 'Welcome: ready')
+            self.send_html(0, 'All players (re)connected')
+            return
         # pylint: disable=protected-access
         yield self._game_obj._on_recv(
             self._game_obj.on_notify,
             msg,
         )
+
+    @gen.coroutine
+    def _get_player_count(self, game_id):
+        """ Get player count  """
+        cursor = yield momoko.Op(
+            db.execute,
+            """
+                SELECT
+                    players
+                FROM
+                    game
+                WHERE
+                    game_id = %s
+            """,
+            (game_id,)
+        )
+        players = cursor.fetchone()
+        if players is None:
+            player_count = 0
+        else:
+            player_count = players[0]
+        return player_count
 
     @gen.engine
     def on_message(self, message):
@@ -113,11 +137,14 @@ class MainSocket(GameSocket):
                 else:
                     self._game_obj = s.GAME_CLASS()(self)
                     self._channel = Channel(self.game_id, self.on_notify)
-                    if int(self._player_id) + 1 == s.PLAYER:
+                    player_count = yield self._get_player_count(
+                        self._game_id
+                    )
+                    if player_count >= s.PLAYER:
                         self.send_notify({
                             'type': 'game_ready'
                         })
-                        self.send_html(0, 'Welcome: ready')
+                        self.send_html(0, 'Welcome: connected')
                     else:
                         self.send_html(0, 'Welcome: waiting for players')
             else:
@@ -127,6 +154,7 @@ class MainSocket(GameSocket):
             yield self._game_obj._on_recv(
                 self._game_obj.on_command,
                 msg,
+                auto_update = True,
             )
 
     def on_close(self):
