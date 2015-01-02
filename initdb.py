@@ -20,6 +20,19 @@ def init():
     db.execute("""
         DROP SCHEMA public CASCADE;
         CREATE SCHEMA public;
+        CREATE TABLE game
+        (
+            game_id text PRIMARY KEY,
+            players integer,
+            state bytea,
+            timestamp timestamp
+        );
+        CREATE UNIQUE INDEX ix_game_id
+            ON game
+            (game_id);
+        CREATE INDEX ix_timestamp
+            ON game
+            (timestamp);
     """, callback=_done)
 
 def main():

@@ -1,6 +1,7 @@
 """ Websockets for the ships game """
 
 import tornado.websocket as websocket
+import tornado.gen as gen
 import logging as lg
 import json
 from . import security as sec
@@ -33,18 +34,22 @@ class MainSocket(JsonSocket):
     def open(self):
         pass
 
+    @gen.coroutine
     def on_message(self, message):
         lg.debug("Main socket message: %s ", message)
         msg = json.loads(message, encoding="UTF-8")
         if msg['type'] == "ping":
             self.send_msg({'type' : 'pong'})
-        if msg['type'] == "hello":
+        elif msg['type'] == "hello":
             verify = sec.client_verify(
                 msg['game'],
                 msg['player']
             )
             if verify == msg['secret']:
-                self.send_html(0, 'Welcome')
+                if int(msg['player']) == -1:
+                    self.send_html(0, 'Game is full')
+                else:
+                    self.send_html(0, 'Welcome: waiting for players')
             else:
                 self.send_html(0, 'Access denied')
 

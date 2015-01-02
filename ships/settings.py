@@ -1,5 +1,6 @@
 """ Settings for ships """
 
+PLAYER=2
 ENCODING="UTF-8"
 SECRET=(
     "bOKBlbsEcGa3nHKOuKoVzRMLEU0tD58h"
