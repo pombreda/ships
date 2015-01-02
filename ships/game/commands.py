@@ -14,4 +14,4 @@ def get(state):
 
 def environ(_):
     """ Display environ """
-    return freeze.vformat(os.environ)
+    return freeze.vformat(dict(os.environ))
