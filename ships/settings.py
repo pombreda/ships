@@ -6,6 +6,9 @@ def GAME_CLASS():
     return Ships
 
 PLAYER      = 2
+# AUTO_UPDATE is usally used during prototyping when where is no SVG renderer
+# yet. Later the game will decide if there is a change to update on the clients
+# GUI.
 AUTO_UPDATE = True
 ENCODING    = "UTF-8"
 SECRET      = (
