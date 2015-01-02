@@ -11,7 +11,3 @@ def set(state, *args):
 def get(state):
     """ Test command: get a value """
     return state['val']
-
-def environ(_):
-    """ Display environ """
-    return freeze.vformat(dict(os.environ))
