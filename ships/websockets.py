@@ -86,14 +86,13 @@ class MainSocket(GameSocket):
         type_ = msg['type']
         if type_ == 'game_ready':
             self.send_html(0, 'Welcome: ready')
-            return
         # pylint: disable=protected-access
-        self._game_obj._on_recv(
+        yield self._game_obj._on_recv(
             self._game_obj.on_notify,
             msg,
         )
 
-    @gen.coroutine
+    @gen.engine
     def on_message(self, message):
         msg = json.loads(message, encoding="UTF-8")
         type_ = msg['type']
@@ -125,7 +124,7 @@ class MainSocket(GameSocket):
                 self.send_html(0, 'Access denied')
         elif type_ == "command":
             # pylint: disable=protected-access
-            self._game_obj._on_recv(
+            yield self._game_obj._on_recv(
                 self._game_obj.on_command,
                 msg,
             )

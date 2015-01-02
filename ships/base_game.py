@@ -57,7 +57,18 @@ class BaseGame(object):
                 )
                 state = cursor.fetchone()[0]
                 state = msgpack.loads(state, encoding=s.ENCODING)
-                yield call(data, state)
+                try:
+                    val = yield call(data, state)
+                    self.socket.send_html(
+                        0,
+                        "<pre>%s</pre>" % val,
+                    )
+                except Exception as e:
+                    self.socket.send_html(
+                        0,
+                        "<pre>%s</pre>" % e
+                    )
+                    raise
                 state = msgpack.dumps(state)
                 yield momoko.Op(
                     connection.execute,
@@ -76,6 +87,8 @@ class BaseGame(object):
                         self.game_id
                     )
                 )
+                html = yield self.on_visualize(state)
+                self.socket.send_html(1, html)
             finally:
                 yield momoko.Op(connection.execute, "COMMIT")
 
@@ -88,5 +101,11 @@ class BaseGame(object):
     @abc.abstractmethod
     @gen.coroutine
     def on_notify(self, notify, state):
-        """ Handle messages from other players """
-        lg.fatal("Message not handled: %s", notify)
+        """ Handle notify from other players """
+        lg.fatal("Notify not handled: %s", notify)
+
+    @abc.abstractmethod
+    @gen.coroutine
+    def on_visualize(self, state):
+        """ Visualize the current state for the current player """
+        lg.fatal("Visualize not handled")

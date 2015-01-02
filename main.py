@@ -9,6 +9,7 @@ import tornado.ioloop as ioloop
 import tornado.web as web
 import tornado.gen as gen
 import tornado.template as template
+import tornado.log as tlog
 import ships.websockets as sockets
 import logging as lg
 import ships.security as sec
@@ -100,8 +101,10 @@ class MainHandler(web.RequestHandler):
 
 def main():
     """ Initialize tornado IOLoop and webserver """
+    lgg = lg.getLogger()
     if 'DEBUG' in os.environ:
-        lg.getLogger().setLevel(lg.DEBUG)
+        lgg.setLevel(lg.DEBUG)
+    lgg.handlers[0].setFormatter(tlog.LogFormatter())
     handlers = [
         (r'/game/(\w+)', MainHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),
