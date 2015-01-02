@@ -23,5 +23,5 @@ dsn=_dsntpl % {
 lg.debug("Momoko dsn: %s", dsn)
 db = momoko.Pool(
     dsn=dsn,
-    size=10
+    size=2
 )

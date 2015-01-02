@@ -1,9 +1,11 @@
 """ Postgres communication channel """
 
+import logging as lg
 import psycopg2
 import psycopg2.extensions as pext
 import tornado.gen as gen
 import tornado.ioloop as ioloop
+from .common import coro_engine
 from .sql import db
 
 
@@ -18,10 +20,11 @@ class Channel(object):
         )
         self._ioloop.add_handler(
             self._conn.fileno(),
-            self._receive,
+            coro_engine(self._receive),
             self._ioloop.READ
         )
         curs = self._conn.cursor()
+        lg.debug("Listen on %s", game_id)
         curs.execute("LISTEN %s;" % game_id)
 
     @property
@@ -35,4 +38,4 @@ class Channel(object):
         if state == pext.POLL_OK:
             if self._conn.notifies:
                 notify = self._conn.notifies.pop()
-                yield self._callback(notify)
+                yield self._callback(notify.payload)

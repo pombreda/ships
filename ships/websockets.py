@@ -1,8 +1,9 @@
 """ Websockets for the ships game """
 
+import logging as lg
 import tornado.websocket as websocket
 import tornado.gen as gen
-import logging as lg
+import psycopg2
 import json
 import msgpack
 from . import security as sec
@@ -42,11 +43,21 @@ class GameSocket(websocket.WebSocketHandler):
     def send_notify(self, notify):
         """ Send notify to all players """
         notify['sender'] = self._player_id
-        data = msgpack.dumps(notify)
+        lg.debug("Notify sent: %s %s", self._game_id, notify)
+        data = json.dumps(notify)
         db.execute(
             "NOTIFY %s, %%s;" % self._game_id,
-            (data)
+            (data,),
+            callback=self._notify_done
         )
+
+    def _notify_done(self, cursor, error):
+        """ Giving feedback """
+        lg.debug("Notify callback: %s ", error)
+        try:
+            lg.debug("%s", cursor.fetchall())
+        except psycopg2.ProgrammingError:
+            pass
 
     @property
     def game_id(self):
@@ -68,7 +79,8 @@ class MainSocket(GameSocket):
     @gen.coroutine
     def on_notify(self, data):
         """ Receives notification from channel and send them to the game """
-        msg = msgpack.loads(data, encoding=s.ENCODING)
+        msg = json.loads(data, encoding=s.ENCODING)
+        lg.debug("Notify received: %s", msg)
         if int(msg['sender']) == self._player_id:
             return
         type_ = msg['type']
@@ -83,9 +95,10 @@ class MainSocket(GameSocket):
 
     @gen.coroutine
     def on_message(self, message):
-        lg.debug("Main socket message: %s ", message)
         msg = json.loads(message, encoding="UTF-8")
         type_ = msg['type']
+        if type_ != "ping":
+            lg.debug("Main socket message: %s ", message)
         if type_ == "ping":
             self.send_msg({'type' : 'pong'})
         elif type_ == "hello":
