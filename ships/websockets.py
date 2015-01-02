@@ -4,11 +4,22 @@ import tornado.websocket as websocket
 import tornado.gen as gen
 import logging as lg
 import json
+import msgpack
 from . import security as sec
+from .channel import Channel
+from . import settings as s
+from .sql import db
 
-class JsonSocket(websocket.WebSocketHandler):
+class GameSocket(websocket.WebSocketHandler):
+    """ Adds send_* methods for game interaction """
     # pylint: disable=too-few-public-methods,abstract-method
-    """ Adds send_msg which will encode the message as JSON """
+    def __init__(self, application, request, **kwargs):
+        self._game_id   = None
+        self._player_id = None
+        self._game_obj  = None
+        self._channel   = None
+        super().__init__(application, request, **kwargs)
+
     def send_msg(self, msg):
         """ Encode JSON """
         message = json.dumps(msg)
@@ -28,30 +39,83 @@ class JsonSocket(websocket.WebSocketHandler):
             'html': html,
         })
 
-class MainSocket(JsonSocket):
+    def send_notify(self, notify):
+        """ Send notify to all players """
+        notify['sender'] = self._player_id
+        data = msgpack.dumps(notify)
+        db.execute(
+            "NOTIFY %s, %%s;" % self._game_id,
+            (data)
+        )
+
+    @property
+    def game_id(self):
+        """ Return game id """
+        return self._game_id
+
+    @property
+    def player_id(self):
+        """ Return player id """
+        return self._player_id
+
+
+class MainSocket(GameSocket):
     # pylint: disable=abstract-method
-    """ Main socket, should be the only one, lets see """
+    """ Main socket, should be the only class, lets see """
     def open(self):
         pass
+
+    @gen.coroutine
+    def on_notify(self, data):
+        """ Receives notification from channel and send them to the game """
+        msg = msgpack.loads(data, encoding=s.ENCODING)
+        if int(msg['sender']) == self._player_id:
+            return
+        type_ = msg['type']
+        if type_ == 'game_ready':
+            self.send_html(0, 'Welcome: ready')
+            return
+        # pylint: disable=protected-access
+        self._game_obj._on_recv(
+            self._game_obj.on_notify,
+            msg,
+        )
 
     @gen.coroutine
     def on_message(self, message):
         lg.debug("Main socket message: %s ", message)
         msg = json.loads(message, encoding="UTF-8")
-        if msg['type'] == "ping":
+        type_ = msg['type']
+        if type_ == "ping":
             self.send_msg({'type' : 'pong'})
-        elif msg['type'] == "hello":
+        elif type_ == "hello":
             verify = sec.client_verify(
                 msg['game'],
                 msg['player']
             )
             if verify == msg['secret']:
-                if int(msg['player']) == -1:
+                self._game_id = msg['game']
+                self._player_id = int(msg['player'])
+                if int(self._player_id) == -1:
                     self.send_html(0, 'Game is full')
                 else:
-                    self.send_html(0, 'Welcome: waiting for players')
+                    self._game_obj = s.GAME_CLASS()(self)
+                    self._channel = Channel(self.game_id, self.on_notify)
+                    if int(self._player_id) + 1 == s.PLAYER:
+                        self.send_notify({
+                            'type': 'game_ready'
+                        })
+                        self.send_html(0, 'Welcome: ready')
+                    else:
+                        self.send_html(0, 'Welcome: waiting for players')
             else:
                 self.send_html(0, 'Access denied')
+        elif type_ == "command":
+            # pylint: disable=protected-access
+            self._game_obj._on_recv(
+                self._game_obj.on_command,
+                msg,
+            )
 
     def on_close(self):
         pass

@@ -1,5 +1,10 @@
 """ Settings for ships """
 
+def GAME_CLASS():
+    """ Get the game class """
+    from .game import Ships
+    return Ships
+
 PLAYER=2
 ENCODING="UTF-8"
 SECRET=(

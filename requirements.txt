@@ -1,3 +1,4 @@
 tornado
 momoko
 psycopg2
+msgpack-python

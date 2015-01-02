@@ -3,6 +3,7 @@
 import os
 import momoko
 from datetime import datetime
+import msgpack
 import tornado.httpserver as http
 import tornado.ioloop as ioloop
 import tornado.web as web
@@ -41,63 +42,61 @@ class MainHandler(web.RequestHandler):
     @gen.coroutine
     def find_player(self, game):
         """ Finding game / the player id """
-        try:
-            connection = yield momoko.Op(db.getconn)
-            with db.manage(connection):
-                yield momoko.Op(connection.execute, "BEGIN")
-                try:
-                    cursor = yield momoko.Op(
+        connection = yield momoko.Op(db.getconn)
+        with db.manage(connection):
+            yield momoko.Op(connection.execute, "BEGIN")
+            try:
+                cursor = yield momoko.Op(
+                    connection.execute,
+                    """
+                        SELECT
+                            players
+                        FROM
+                            game
+                        WHERE
+                            game_id = %s
+                    """,
+                    (game,)
+                )
+                players = cursor.fetchone()
+                if players is None:
+                    state = msgpack.dumps({})
+                    yield momoko.Op(
                         connection.execute,
                         """
-                            SELECT
-                                players
-                            FROM
+                            INSERT INTO
                                 game
-                            WHERE
-                                game_id = %s
+                            VALUES
+                                (%s, %s, %s, %s)
                         """,
-                        (game,)
+                        (game,1, state, datetime.now())
                     )
-                    players = cursor.fetchone()
-                    if players is None:
+                    return 0
+
+                else:
+                    player_count = players[0]
+                    if player_count < s.PLAYER:
                         yield momoko.Op(
                             connection.execute,
                             """
-                                INSERT INTO
+                                UPDATE
                                     game
-                                VALUES
-                                    (%s, %s, %s, %s)
+                                SET
+                                    players = %s,
+                                    timestamp = %s
+                                WHERE
+                                    game_id = %s;
                             """,
-                            (game,1, None, datetime.now())
-                        )
-                        return 0
-
-                    else:
-                        player_count = players[0]
-                        if player_count < s.PLAYER:
-                            yield momoko.Op(
-                                connection.execute,
-                                """
-                                    UPDATE
-                                        game
-                                    SET
-                                        players = %s,
-                                        timestamp = %s
-                                    WHERE
-                                        game_id = %s;
-                                """,
-                                (
-                                    player_count + 1,
-                                    datetime.now(),
-                                    game
-                                )
+                            (
+                                player_count + 1,
+                                datetime.now(),
+                                game
                             )
-                            return player_count
-                        return -1
-                finally:
-                    yield momoko.Op(connection.execute, "COMMIT")
-        finally:
-            pass
+                        )
+                        return player_count
+                    return -1
+            finally:
+                yield momoko.Op(connection.execute, "COMMIT")
 
 def main():
     """ Initialize tornado IOLoop and webserver """
