@@ -2,6 +2,7 @@
 
 import os
 import momoko
+import random
 from datetime import datetime
 import msgpack
 import tornado.httpserver as http
@@ -22,6 +23,18 @@ class MainHandler(web.RequestHandler):
     # pylint: disable=too-few-public-methods, abstract-method, star-args
     # pylint: disable=arguments-differ
     """ Main handler for entry page """
+
+    @gen.coroutine
+    def get(self):
+        game = ''.join(random.choice(
+            'abcdefghijklmnopqrstuvxyz'
+        ) for i in range(16))
+        self.redirect("/game/%s" % game)
+
+class GameHandler(web.RequestHandler):
+    # pylint: disable=too-few-public-methods, abstract-method, star-args
+    # pylint: disable=arguments-differ
+    """ Generate game entry page """
 
     @gen.coroutine
     def get(self, game):
@@ -106,7 +119,8 @@ def main():
         lgg.setLevel(lg.DEBUG)
     lgg.handlers[0].setFormatter(tlog.LogFormatter())
     handlers = [
-        (r'/game/(\w+)', MainHandler),
+        (r'/', MainHandler),
+        (r'/game/(\w+)', GameHandler),
         (r'/static/(.*)', web.StaticFileHandler, {'path': 'static'}),
         (r'/main', sockets.MainSocket),
     ]
