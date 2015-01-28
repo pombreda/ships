@@ -7,3 +7,5 @@ Features:
 * websockets using tornado
 * postgres saving state
 * postgres as message queue
+
+Running on: https://ships.herokuapp.com
